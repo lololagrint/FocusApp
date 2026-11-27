@@ -62,7 +62,7 @@ class AppMonitorService : AccessibilityService() {
         val updatedPolicy = PolicyStore.policy(this, pkg) ?: return
         if (updatedPolicy.dailyEnabled && state.usedMs >= updatedPolicy.dailyMinutes * 60_000L) {
             PolicyStore.saveState(this, pkg, state.copy(reason = "Limite journalière", cooldownUntilWall = 0))
-        } else if (updatedPolicy.sessionEnabled && duration >= updatedPolicy.sessionMinutes * 60_000L) {
+        } else if (updatedPolicy.sessionEnabled && state.sessionUsedMs >= updatedPolicy.sessionMinutes * 60_000L) {
             PolicyStore.startCooldown(this, pkg, "Limite de session", now)
         }
     }
