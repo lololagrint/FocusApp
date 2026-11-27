@@ -24,7 +24,8 @@ class AppMonitorService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var thresholdTask: Runnable? = null
     private var reminderTask: Runnable? = null
-    private val channelId = "focus_reminders"
+    // Nouvel identifiant pour appliquer le niveau élevé même si l’ancien canal existe déjà.
+    private val channelId = "focus_reminders_popup"
 
     // Réagit aux changements d'application au premier plan : comptabilise l'ancienne, puis surveille la nouvelle.
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -102,7 +103,7 @@ class AppMonitorService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(NotificationChannel(
-                channelId, "Rappels Focus Control", NotificationManager.IMPORTANCE_DEFAULT
+                channelId, "Rappels Focus Control (pop-up)", NotificationManager.IMPORTANCE_HIGH
             ).apply { description = "Rappels avant le blocage d'une application surveillée" })
         }
     }
@@ -126,13 +127,15 @@ class AppMonitorService : AccessibilityService() {
         ensureNotificationChannel()
         val minutes = (remaining + 59_999L) / 60_000L
         val label = PolicyStore.policy(this, pkg)?.label ?: pkg
-        val text = if (minutes <= 1L) "Blocage dans moins d'une minute" else "Blocage dans environ $minutes minutes"
+        val text = "Blocage dans ${minutes}min"
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Focus Control • $label")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText("$text. Le temps restant est calculé selon vos limites actives."))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setOnlyAlertOnce(false)
             .setAutoCancel(false)
             .build()
