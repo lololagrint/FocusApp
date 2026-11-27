@@ -4,6 +4,9 @@ package fr.focuscontrol
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
 import android.provider.Settings
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
@@ -21,6 +24,9 @@ data class InstalledApp(val packageName: String, val label: String)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4102)
+        }
         setContent { MaterialTheme { FocusHome(this) } }
     }
 }
