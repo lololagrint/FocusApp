@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 
 data class InstalledApp(val packageName: String, val label: String)
 
+// Point d'entrée de l'application : demande l'autorisation de notification puis affiche l'interface principale.
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Écran d'accueil : charge les règles enregistrées, liste les applications suivies et permet d'en ajouter.
 @Composable
 private fun FocusHome(activity: MainActivity) {
     var refresh by remember { mutableIntStateOf(0) }
@@ -92,6 +94,7 @@ private fun FocusHome(activity: MainActivity) {
     }
 }
 
+// Éditeur d'une règle : active séparément les limites journalières et par session, puis enregistre les valeurs.
 @Composable
 private fun PolicyEditor(policy: AppPolicy, onSave: (AppPolicy) -> Unit, onDelete: (AppPolicy) -> Unit, onBack: () -> Unit) {
     var daily by remember(policy) { mutableStateOf(policy.dailyMinutes.toString()) }
