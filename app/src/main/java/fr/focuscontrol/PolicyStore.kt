@@ -8,7 +8,9 @@ data class AppPolicy(
     val label: String,
     val dailyMinutes: Int = 60,
     val sessionMinutes: Int = 15,
-    val cooldownMinutes: Int = 30
+    val cooldownMinutes: Int = 30,
+    val dailyEnabled: Boolean = true,
+    val sessionEnabled: Boolean = true
 )
 
 data class BlockState(
@@ -31,8 +33,15 @@ object PolicyStore {
         return root.keys().asSequence().mapNotNull { key ->
             runCatching {
                 val o = root.getJSONObject(key)
-                AppPolicy(key, o.optString("label", key), o.optInt("daily", 60),
-                    o.optInt("session", 15), o.optInt("cooldown", 30))
+                AppPolicy(
+                    packageName = key,
+                    label = o.optString("label", key),
+                    dailyMinutes = o.optInt("daily", 60),
+                    sessionMinutes = o.optInt("session", 15),
+                    cooldownMinutes = o.optInt("cooldown", 30),
+                    dailyEnabled = o.optBoolean("dailyEnabled", true),
+                    sessionEnabled = o.optBoolean("sessionEnabled", true)
+                )
             }.getOrNull()
         }.sortedBy { it.label.lowercase() }.toList()
     }
@@ -42,10 +51,13 @@ object PolicyStore {
 
     fun savePolicy(context: Context, p: AppPolicy) {
         val root = JSONObject(prefs(context).getString(POLICIES, "{}") ?: "{}")
-        root.put(p.packageName, JSONObject().put("label", p.label)
+        root.put(p.packageName, JSONObject()
+            .put("label", p.label)
             .put("daily", p.dailyMinutes.coerceIn(1, 1440))
             .put("session", p.sessionMinutes.coerceIn(1, 1440))
-            .put("cooldown", p.cooldownMinutes.coerceIn(0, 1440)))
+            .put("cooldown", p.cooldownMinutes.coerceIn(0, 1440))
+            .put("dailyEnabled", p.dailyEnabled)
+            .put("sessionEnabled", p.sessionEnabled))
         prefs(context).edit().putString(POLICIES, root.toString()).apply()
     }
 
@@ -81,11 +93,11 @@ object PolicyStore {
         val old = resetIfExpired(context, packageName, now)
         val p = policy(context, packageName) ?: return old
         val used = old.usedMs + delta.coerceAtLeast(0)
-        val reason = when {
-            used >= p.dailyMinutes * 60_000L -> "Limite journalière"
-            old.reason == "Limite journalière" -> old.reason
-            else -> old.reason
-        }
+        val reason = if (p.dailyEnabled && used >= p.dailyMinutes * 60_000L) {
+            "Limite journalière"
+        } else if (old.reason == "Limite journalière" && p.dailyEnabled) {
+            old.reason
+        } else old.reason
         val updated = old.copy(usedMs = used, reason = reason)
         saveState(context, packageName, updated)
         return updated
@@ -93,6 +105,7 @@ object PolicyStore {
 
     fun startCooldown(context: Context, packageName: String, reason: String, now: Long): BlockState {
         val p = policy(context, packageName) ?: return state(context, packageName)
+        if (!p.sessionEnabled) return state(context, packageName)
         val old = resetIfExpired(context, packageName, now)
         val updated = old.copy(reason = reason, cooldownUntilWall = now + p.cooldownMinutes * 60_000L)
         saveState(context, packageName, updated)
