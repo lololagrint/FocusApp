@@ -27,6 +27,14 @@ class AppMonitorService : AccessibilityService() {
     // Nouvel identifiant pour appliquer le niveau élevé même si l’ancien canal existe déjà.
     private val channelId = "focus_reminders_popup"
 
+    companion object {
+        // Expose uniquement le paquet actif et l'heure de début monotone pour afficher un compteur live sur l'accueil.
+        @Volatile var activePackage: String? = null
+            private set
+        @Volatile var activeSinceElapsed: Long = 0L
+            private set
+    }
+
     // Réagit aux changements d'application au premier plan : comptabilise l'ancienne, puis surveille la nouvelle.
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val pkg = event?.packageName?.toString() ?: return
@@ -44,6 +52,8 @@ class AppMonitorService : AccessibilityService() {
             PolicyStore.resumeSession(this, pkg, System.currentTimeMillis())
             foregroundPackage = pkg
             foregroundSince = nowElapsed
+            activePackage = pkg
+            activeSinceElapsed = nowElapsed
         }
         enforce(pkg)
         if (previous != pkg && foregroundPackage == pkg) notifyTimeRemaining(pkg)
@@ -213,6 +223,8 @@ class AppMonitorService : AccessibilityService() {
         cancelScheduledTasks()
         foregroundPackage = null
         foregroundSince = 0
+        activePackage = null
+        activeSinceElapsed = 0L
     }
 
     override fun onServiceConnected() {
