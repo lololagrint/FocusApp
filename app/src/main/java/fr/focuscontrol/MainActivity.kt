@@ -37,6 +37,8 @@ private fun FocusHome(activity: MainActivity) {
     var refresh by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<AppPolicy?>(null) }
     var retentionText by remember { mutableStateOf(PolicyStore.sessionRetentionMinutes(activity).toString()) }
+    var showAppPicker by remember { mutableStateOf(false) }
+    var appSearch by remember { mutableStateOf("") }
     val policies = remember(refresh) { PolicyStore.policies(activity) }
     val installed = remember {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -92,20 +94,56 @@ private fun FocusHome(activity: MainActivity) {
                 }
             }
             item {
-                var expanded by remember { mutableStateOf(false) }
-                OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = {
+                    appSearch = ""
+                    showAppPicker = true
+                }, modifier = Modifier.fillMaxWidth()) {
                     Text("Ajouter une application")
-                }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    installed.filter { app -> policies.none { it.packageName == app.packageName } }
-                        .take(100).forEach { app ->
-                            DropdownMenuItem(text = { Text(app.label) }, onClick = {
-                                selected = AppPolicy(app.packageName, app.label); expanded = false
-                            })
-                        }
                 }
             }
         }
+    }
+
+    // Sélecteur complet avec recherche : aucune limite arbitraire sur le nombre d'applications affichées.
+    if (showAppPicker) {
+        val availableApps = installed.filter { app ->
+            policies.none { it.packageName == app.packageName } &&
+                app.label.contains(appSearch, ignoreCase = true)
+        }
+        AlertDialog(
+            onDismissRequest = { showAppPicker = false },
+            title = { Text("Choisir une application") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = appSearch,
+                        onValueChange = { appSearch = it },
+                        label = { Text("Rechercher (ex. X, YouTube)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                        items(availableApps, key = { it.packageName }) { app ->
+                            TextButton(
+                                onClick = {
+                                    selected = AppPolicy(app.packageName, app.label)
+                                    showAppPicker = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(app.label, modifier = Modifier.fillMaxWidth())
+                            }
+                        }
+                        if (availableApps.isEmpty()) {
+                            item { Text("Aucune application trouvée.") }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAppPicker = false }) { Text("Fermer") }
+            }
+        )
     }
 }
 
