@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
+// Activité plein écran affichée lorsqu'une application suivie atteint une de ses limites.
 class BlockActivity : ComponentActivity() {
     companion object { const val EXTRA_PACKAGE = "blocked_package" }
     private var packageNameBlocked by mutableStateOf("")
@@ -36,6 +37,7 @@ class BlockActivity : ComponentActivity() {
     }
 }
 
+// Présente la raison du blocage et le compte à rebours avant le déblocage.
 @Composable
 private fun BlockScreen(activity: Activity, pkg: String) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -81,6 +83,7 @@ private fun BlockScreen(activity: Activity, pkg: String) {
     }
 }
 
+// Petit composant réutilisé pour afficher une information de blocage.
 @Composable
 private fun InfoCard(title: String, value: String) {
     Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
@@ -91,6 +94,7 @@ private fun InfoCard(title: String, value: String) {
     }
 }
 
+// Convertit une durée en affichage heures:minutes:secondes.
 private fun formatTime(ms: Long): String {
     val total = TimeUnit.MILLISECONDS.toSeconds(ms)
     return "%02d:%02d:%02d".format(total / 3600, (total % 3600) / 60, total % 60)
