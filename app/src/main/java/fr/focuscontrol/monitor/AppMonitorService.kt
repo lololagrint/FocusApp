@@ -102,6 +102,7 @@ class AppMonitorService : AccessibilityService() {
                 val duration = SystemClock.elapsedRealtime() - foregroundSince
                 account(pkg, duration)
                 foregroundSince = SystemClock.elapsedRealtime()
+                activeSinceElapsed = foregroundSince
                 enforce(pkg)
                 if (foregroundPackage == pkg) scheduleNextThreshold(pkg)
             }
@@ -234,6 +235,8 @@ class AppMonitorService : AccessibilityService() {
     // Libère les rappels en attente lorsque le service est détruit.
     override fun onDestroy() {
         cancelScheduledTasks()
+        activePackage = null
+        activeSinceElapsed = 0L
         super.onDestroy()
     }
 }
