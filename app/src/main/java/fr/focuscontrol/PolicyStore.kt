@@ -3,6 +3,7 @@ package fr.focuscontrol
 import android.content.Context
 import org.json.JSONObject
 
+// Configuration des restrictions appliquées à une application suivie.
 data class AppPolicy(
     val packageName: String,
     val label: String,
@@ -13,6 +14,7 @@ data class AppPolicy(
     val sessionEnabled: Boolean = true
 )
 
+// État d'utilisation et de blocage conservé entre les ouvertures de l'application.
 data class BlockState(
     val usedMs: Long,
     val reason: String,
@@ -20,6 +22,7 @@ data class BlockState(
     val cycleStartWall: Long
 )
 
+// Centralise la lecture et l'écriture locale des règles et des compteurs (SharedPreferences).
 object PolicyStore {
     private const val PREFS = "focus_control"
     private const val POLICIES = "policies"
@@ -89,6 +92,7 @@ object PolicyStore {
         return old
     }
 
+    // Ajoute une durée d'utilisation au compteur journalier et mémorise si la limite est atteinte.
     fun addUsage(context: Context, packageName: String, delta: Long, now: Long): BlockState {
         val old = resetIfExpired(context, packageName, now)
         val p = policy(context, packageName) ?: return old
@@ -103,6 +107,7 @@ object PolicyStore {
         return updated
     }
 
+    // Démarre la période d'attente après le dépassement de la limite par session.
     fun startCooldown(context: Context, packageName: String, reason: String, now: Long): BlockState {
         val p = policy(context, packageName) ?: return state(context, packageName)
         if (!p.sessionEnabled) return state(context, packageName)
@@ -112,6 +117,7 @@ object PolicyStore {
         return updated
     }
 
+    // Retire automatiquement un blocage de session lorsque son délai est écoulé.
     fun clearCooldownIfExpired(context: Context, packageName: String, now: Long): BlockState {
         val s = resetIfExpired(context, packageName, now)
         if (s.cooldownUntilWall in 1..now && s.reason != "Limite journalière") {
