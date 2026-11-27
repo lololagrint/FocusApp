@@ -5,8 +5,6 @@ package fr.focuscontrol
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.app.AppOpsManager
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -66,13 +64,13 @@ private fun FocusHome(activity: MainActivity) {
                 Card(onClick = { selected = p }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text(p.label, style = MaterialTheme.typography.titleMedium)
+                        Text("Jour : ${if (p.dailyEnabled) "activé" else "désactivé"} • Session : ${if (p.sessionEnabled) "activée" else "désactivée"}")
                         Text("Jour : ${p.dailyMinutes} min  •  Session : ${p.sessionMinutes} min  •  Cooldown : ${p.cooldownMinutes} min")
                     }
                 }
             }
             item {
                 var expanded by remember { mutableStateOf(false) }
-                var query by remember { mutableStateOf("") }
                 OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                     Text("Ajouter une application")
                 }
@@ -94,21 +92,43 @@ private fun PolicyEditor(policy: AppPolicy, onSave: (AppPolicy) -> Unit, onDelet
     var daily by remember(policy) { mutableStateOf(policy.dailyMinutes.toString()) }
     var session by remember(policy) { mutableStateOf(policy.sessionMinutes.toString()) }
     var cooldown by remember(policy) { mutableStateOf(policy.cooldownMinutes.toString()) }
+    var dailyEnabled by remember(policy) { mutableStateOf(policy.dailyEnabled) }
+    var sessionEnabled by remember(policy) { mutableStateOf(policy.sessionEnabled) }
+
     Scaffold(topBar = { TopAppBar(title = { Text(policy.label) }, navigationIcon = {
         TextButton(onClick = onBack) { Text("Retour") }
     }) }) { padding ->
         Column(Modifier.padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.weight(1f)) {
+                    Text("Limite journalière", style = MaterialTheme.typography.titleMedium)
+                    Text("Activer ou désactiver cette restriction")
+                }
+                Switch(checked = dailyEnabled, onCheckedChange = { dailyEnabled = it })
+            }
             Text("Limite journalière (minutes)")
-            OutlinedTextField(daily, { daily = it.filter(Char::isDigit) }, singleLine = true)
+            OutlinedTextField(daily, { daily = it.filter(Char::isDigit) }, singleLine = true, enabled = dailyEnabled)
+
+            Divider()
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.weight(1f)) {
+                    Text("Limite par session", style = MaterialTheme.typography.titleMedium)
+                    Text("Activer ou désactiver cette restriction")
+                }
+                Switch(checked = sessionEnabled, onCheckedChange = { sessionEnabled = it })
+            }
             Text("Durée maximale d'une session (minutes)")
-            OutlinedTextField(session, { session = it.filter(Char::isDigit) }, singleLine = true)
+            OutlinedTextField(session, { session = it.filter(Char::isDigit) }, singleLine = true, enabled = sessionEnabled)
             Text("Cooldown après une session (minutes)")
-            OutlinedTextField(cooldown, { cooldown = it.filter(Char::isDigit) }, singleLine = true)
+            OutlinedTextField(cooldown, { cooldown = it.filter(Char::isDigit) }, singleLine = true, enabled = sessionEnabled)
+
             Button(onClick = {
                 onSave(policy.copy(
                     dailyMinutes = daily.toIntOrNull()?.coerceIn(1, 1440) ?: policy.dailyMinutes,
                     sessionMinutes = session.toIntOrNull()?.coerceIn(1, 1440) ?: policy.sessionMinutes,
-                    cooldownMinutes = cooldown.toIntOrNull()?.coerceIn(0, 1440) ?: policy.cooldownMinutes
+                    cooldownMinutes = cooldown.toIntOrNull()?.coerceIn(0, 1440) ?: policy.cooldownMinutes,
+                    dailyEnabled = dailyEnabled,
+                    sessionEnabled = sessionEnabled
                 ))
             }, modifier = Modifier.fillMaxWidth()) { Text("Enregistrer") }
             TextButton(onClick = { onDelete(policy) }) { Text("Retirer cette application") }
