@@ -45,7 +45,7 @@ class AppMonitorService : AccessibilityService() {
         if (previous != pkg && foregroundPackage == pkg) notifyTimeRemaining(pkg)
         if (foregroundPackage == pkg) {
             scheduleNextThreshold(pkg)
-            scheduleReminder(pkg)
+            if (previous != pkg || reminderTask == null) scheduleReminder(pkg)
         }
     }
 
@@ -145,6 +145,7 @@ class AppMonitorService : AccessibilityService() {
         }
         val task = Runnable {
             if (foregroundPackage == pkg && foregroundSince > 0) {
+                reminderTask = null
                 notifyTimeRemaining(pkg)
                 scheduleReminder(pkg)
             }
