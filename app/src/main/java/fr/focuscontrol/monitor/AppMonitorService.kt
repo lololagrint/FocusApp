@@ -34,6 +34,7 @@ class AppMonitorService : AccessibilityService() {
         val previous = foregroundPackage
         if (previous != null && previous != pkg && foregroundSince > 0) {
             cancelScheduledTasks()
+            NotificationManagerCompat.from(this).cancel(previous.hashCode())
             account(previous, nowElapsed - foregroundSince)
         }
         if (previous != pkg) {
@@ -136,8 +137,12 @@ class AppMonitorService : AccessibilityService() {
         reminderTask?.let(handler::removeCallbacks)
         reminderTask = null
         val remaining = remainingBeforeBlock(pkg) ?: return
-        val interval = if (remaining <= 5L * 60_000L) 60_000L else 10L * 60_000L
-        val delay = minOf(interval, remaining)
+        val fiveMinutes = 5L * 60_000L
+        val delay = if (remaining <= fiveMinutes) {
+            minOf(60_000L, remaining)
+        } else {
+            minOf(10L * 60_000L, remaining - fiveMinutes)
+        }
         val task = Runnable {
             if (foregroundPackage == pkg && foregroundSince > 0) {
                 notifyTimeRemaining(pkg)
