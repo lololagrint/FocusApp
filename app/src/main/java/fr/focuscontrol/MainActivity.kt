@@ -8,12 +8,15 @@ import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import fr.focuscontrol.monitor.AppMonitorService
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -39,6 +42,14 @@ private fun FocusHome(activity: MainActivity) {
     var retentionText by remember { mutableStateOf(PolicyStore.sessionRetentionMinutes(activity).toString()) }
     var showAppPicker by remember { mutableStateOf(false) }
     var appSearch by remember { mutableStateOf("") }
+    var dashboardTick by remember { mutableIntStateOf(0) }
+    // Actualise l'affichage chaque seconde pour que l'application utilisée en ce moment continue de compter.
+    LaunchedEffect(Unit) {
+        while (true) {
+            dashboardTick++
+            delay(1_000)
+        }
+    }
     val policies = remember(refresh) { PolicyStore.policies(activity) }
     val installed = remember {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -82,14 +93,35 @@ private fun FocusHome(activity: MainActivity) {
                     PolicyStore.setSessionRetentionMinutes(activity, minutes)
                     retentionText = minutes.toString()
                 }) { Text("Enregistrer la durée") }
-                Text("Applications configurées", style = MaterialTheme.typography.titleMedium)
+                Divider()
+                Text("Suivi du temps d'écran", style = MaterialTheme.typography.titleMedium)
+                Text("Utilisation sur la période journalière de 24 h de chaque application.", style = MaterialTheme.typography.bodySmall)
+
             }
             items(policies, key = { it.packageName }) { p ->
+                val usage = remember(p.packageName, dashboardTick, refresh) {
+                    val now = System.currentTimeMillis()
+                    val state = PolicyStore.resetIfExpired(activity, p.packageName, now)
+                    val liveMs = if (AppMonitorService.activePackage == p.packageName &&
+                        AppMonitorService.activeSinceElapsed > 0L) {
+                        (SystemClock.elapsedRealtime() - AppMonitorService.activeSinceElapsed).coerceAtLeast(0L)
+                    } else 0L
+                    state.usedMs + liveMs
+                }
+                val limitMs = p.dailyMinutes * 60_000L
+                val progress = (usage.toFloat() / limitMs.toFloat()).coerceIn(0f, 1f)
+                val remainingMs = (limitMs - usage).coerceAtLeast(0L)
                 Card(onClick = { selected = p }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text(p.label, style = MaterialTheme.typography.titleMedium)
-                        Text("Jour : ${if (p.dailyEnabled) "activé" else "désactivé"} • Session : ${if (p.sessionEnabled) "activée" else "désactivée"}")
-                        Text("Jour : ${p.dailyMinutes} min  •  Session : ${p.sessionMinutes} min  •  Cooldown : ${p.cooldownMinutes} min")
+                        if (p.dailyEnabled) {
+                            Text("Aujourd'hui : ${formatUsageTime(usage)} / ${p.dailyMinutes}min")
+                            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                            Text(if (remainingMs > 0L) "Restant : ${formatUsageTime(remainingMs)}" else "Limite journalière atteinte")
+                        } else {
+                            Text("Limite journalière désactivée • Temps utilisé : ${formatUsageTime(usage)}")
+                        }
+                        Text("Session : ${if (p.sessionEnabled) "activée" else "désactivée"} • Limite : ${p.sessionMinutes}min • Cooldown : ${p.cooldownMinutes}min", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -195,4 +227,13 @@ private fun PolicyEditor(policy: AppPolicy, onSave: (AppPolicy) -> Unit, onDelet
             TextButton(onClick = { onDelete(policy) }) { Text("Retirer cette application") }
         }
     }
+}
+
+
+// Formate les durées suivies en heures et minutes, sans afficher les secondes.
+private fun formatUsageTime(milliseconds: Long): String {
+    val totalMinutes = (milliseconds.coerceAtLeast(0L) / 60_000L)
+    val hours = totalMinutes / 60L
+    val minutes = totalMinutes % 60L
+    return if (hours > 0L) "${hours}h ${minutes}min" else "${minutes}min"
 }
