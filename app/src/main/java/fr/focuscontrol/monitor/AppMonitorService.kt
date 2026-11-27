@@ -40,6 +40,8 @@ class AppMonitorService : AccessibilityService() {
             account(previous, nowElapsed - foregroundSince)
         }
         if (previous != pkg) {
+            // Recharge la progression sauvegardée si l'application est rouverte avant expiration du délai.
+            PolicyStore.resumeSession(this, pkg, System.currentTimeMillis())
             foregroundPackage = pkg
             foregroundSince = nowElapsed
         }
@@ -79,7 +81,7 @@ class AppMonitorService : AccessibilityService() {
         val elapsed = (SystemClock.elapsedRealtime() - foregroundSince).coerceAtLeast(0)
         val remaining = mutableListOf<Long>()
         if (policy.sessionEnabled) {
-            remaining += policy.sessionMinutes * 60_000L - elapsed
+            remaining += policy.sessionMinutes * 60_000L - state.sessionUsedMs - elapsed
         }
         if (policy.dailyEnabled) {
             remaining += policy.dailyMinutes * 60_000L - state.usedMs - elapsed
@@ -116,7 +118,7 @@ class AppMonitorService : AccessibilityService() {
         if (state.reason.isNotBlank()) return null
         val elapsed = (SystemClock.elapsedRealtime() - foregroundSince).coerceAtLeast(0L)
         val limits = mutableListOf<Long>()
-        if (policy.sessionEnabled) limits += policy.sessionMinutes * 60_000L - elapsed
+        if (policy.sessionEnabled) limits += policy.sessionMinutes * 60_000L - state.sessionUsedMs - elapsed
         if (policy.dailyEnabled) limits += policy.dailyMinutes * 60_000L - state.usedMs - elapsed
         return limits.filter { it > 0L }.minOrNull()
     }
