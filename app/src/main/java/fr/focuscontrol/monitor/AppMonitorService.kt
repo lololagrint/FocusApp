@@ -26,6 +26,7 @@ class AppMonitorService : AccessibilityService() {
     private var reminderTask: Runnable? = null
     private val channelId = "focus_reminders"
 
+    // Réagit aux changements d'application au premier plan : comptabilise l'ancienne, puis surveille la nouvelle.
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val pkg = event?.packageName?.toString() ?: return
         if (pkg == packageName || pkg == "com.android.systemui") return
@@ -49,6 +50,7 @@ class AppMonitorService : AccessibilityService() {
         }
     }
 
+    // Enregistre le temps passé dans une application et déclenche la restriction qui vient d'être atteinte.
     private fun account(pkg: String, duration: Long) {
         val policy = PolicyStore.policy(this, pkg) ?: return
         if (duration <= 0) return
@@ -62,6 +64,7 @@ class AppMonitorService : AccessibilityService() {
         }
     }
 
+    // Programme un contrôle juste à l'échéance la plus proche (limite de session ou limite journalière).
     private fun scheduleNextThreshold(pkg: String) {
         thresholdTask?.let(handler::removeCallbacks)
         thresholdTask = null
@@ -94,6 +97,7 @@ class AppMonitorService : AccessibilityService() {
         handler.postDelayed(task, delay.coerceAtLeast(1L))
     }
 
+    // Crée le canal Android utilisé pour afficher les rappels de Focus Control.
     private fun ensureNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
@@ -103,6 +107,7 @@ class AppMonitorService : AccessibilityService() {
         }
     }
 
+    // Calcule le temps restant avant la première des limites actuellement activées.
     private fun remainingBeforeBlock(pkg: String): Long? {
         val policy = PolicyStore.policy(this, pkg) ?: return null
         val now = System.currentTimeMillis()
@@ -115,6 +120,7 @@ class AppMonitorService : AccessibilityService() {
         return limits.filter { it > 0L }.minOrNull()
     }
 
+    // Affiche ou actualise la notification indiquant dans combien de temps l'application sera bloquée.
     private fun notifyTimeRemaining(pkg: String) {
         val remaining = remainingBeforeBlock(pkg) ?: return
         ensureNotificationChannel()
@@ -133,6 +139,7 @@ class AppMonitorService : AccessibilityService() {
         runCatching { NotificationManagerCompat.from(this).notify(pkg.hashCode(), notification) }
     }
 
+    // Organise les rappels : toutes les 10 minutes, puis chaque minute dans les 5 dernières minutes.
     private fun scheduleReminder(pkg: String) {
         reminderTask?.let(handler::removeCallbacks)
         reminderTask = null
@@ -154,6 +161,7 @@ class AppMonitorService : AccessibilityService() {
         handler.postDelayed(task, delay.coerceAtLeast(1L))
     }
 
+    // Annule les minuteries de contrôle et de rappel quand l'application suivie quitte le premier plan.
     private fun cancelScheduledTasks() {
         thresholdTask?.let(handler::removeCallbacks)
         reminderTask?.let(handler::removeCallbacks)
@@ -161,6 +169,7 @@ class AppMonitorService : AccessibilityService() {
         reminderTask = null
     }
 
+    // Vérifie l'état des restrictions et ouvre l'écran de blocage si une limite est dépassée.
     private fun enforce(pkg: String) {
         val policy = PolicyStore.policy(this, pkg) ?: return
         val now = System.currentTimeMillis()
@@ -191,6 +200,7 @@ class AppMonitorService : AccessibilityService() {
         }
     }
 
+    // Nettoie le suivi et sauvegarde le temps écoulé si Android interrompt le service.
     override fun onInterrupt() {
         foregroundPackage?.let { pkg ->
             if (foregroundSince > 0) account(pkg, SystemClock.elapsedRealtime() - foregroundSince)
@@ -204,6 +214,7 @@ class AppMonitorService : AccessibilityService() {
         super.onServiceConnected()
     }
 
+    // Libère les rappels en attente lorsque le service est détruit.
     override fun onDestroy() {
         cancelScheduledTasks()
         super.onDestroy()
