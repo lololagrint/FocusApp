@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
 private fun FocusHome(activity: MainActivity) {
     var refresh by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<AppPolicy?>(null) }
+    var retentionText by remember { mutableStateOf(PolicyStore.sessionRetentionMinutes(activity).toString()) }
     val policies = remember(refresh) { PolicyStore.policies(activity) }
     val installed = remember {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -65,6 +66,20 @@ private fun FocusHome(activity: MainActivity) {
                 OutlinedButton(onClick = { activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
                     Text("Autoriser les statistiques d'utilisation")
                 }
+                Divider()
+                Text("Conservation du compteur de session", style = MaterialTheme.typography.titleMedium)
+                Text("Après avoir quitté une application suivie, son temps de session est conservé pendant cette durée. Si tu reviens après, le compteur de session repart de zéro. Le temps journalier reste conservé.")
+                OutlinedTextField(
+                    value = retentionText,
+                    onValueChange = { retentionText = it.filter(Char::isDigit).take(4) },
+                    label = { Text("Durée en minutes (1 à 1440)") },
+                    singleLine = true
+                )
+                Button(onClick = {
+                    val minutes = retentionText.toIntOrNull()?.coerceIn(1, 1440) ?: 10
+                    PolicyStore.setSessionRetentionMinutes(activity, minutes)
+                    retentionText = minutes.toString()
+                }) { Text("Enregistrer la durée") }
                 Text("Applications configurées", style = MaterialTheme.typography.titleMedium)
             }
             items(policies, key = { it.packageName }) { p ->
