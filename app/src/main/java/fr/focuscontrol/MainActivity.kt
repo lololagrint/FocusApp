@@ -8,7 +8,6 @@ import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
 import android.provider.Settings
-import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
