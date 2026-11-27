@@ -1,4 +1,3 @@
 <resources>
-    <string name="app_name">Focus Control</string>
-    <string name="accessibility_description">Détecte l'application au premier plan pour appliquer les limites configurées.</string>
+    <string name="focus_control_accessibility_description">Détecte l'application au premier plan pour appliquer les limites configurées.</string>
 </resources>
