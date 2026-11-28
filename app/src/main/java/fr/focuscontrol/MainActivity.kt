@@ -71,17 +71,10 @@ private fun FocusHome(activity: MainActivity) {
     Scaffold(topBar = { TopAppBar(title = { Text("Focus Control") }) }) { padding ->
         LazyColumn(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Surveillance", style = MaterialTheme.typography.titleMedium)
-                Text("Active le service d'accessibilité et l'accès aux statistiques pour appliquer les limites.")
-                Button(onClick = { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) {
-                    Text("Activer l'accessibilité")
-                }
-                OutlinedButton(onClick = { activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
-                    Text("Autoriser les statistiques d'utilisation")
-                }
+                Text("Suivi du temps d'écran", style = MaterialTheme.typography.titleMedium)
+                Text("Utilisation sur la période journalière de 24 h de chaque application.", style = MaterialTheme.typography.bodySmall)
                 Divider()
                 Text("Conservation du compteur de session", style = MaterialTheme.typography.titleMedium)
-                Text("Après avoir quitté une application suivie, son temps de session est conservé pendant cette durée. Si tu reviens après, le compteur de session repart de zéro. Le temps journalier reste conservé.")
                 OutlinedTextField(
                     value = retentionText,
                     onValueChange = { retentionText = it.filter(Char::isDigit).take(4) },
@@ -94,8 +87,13 @@ private fun FocusHome(activity: MainActivity) {
                     retentionText = minutes.toString()
                 }) { Text("Enregistrer la durée") }
                 Divider()
-                Text("Suivi du temps d'écran", style = MaterialTheme.typography.titleMedium)
-                Text("Utilisation sur la période journalière de 24 h de chaque application.", style = MaterialTheme.typography.bodySmall)
+                Text("Surveillance", style = MaterialTheme.typography.titleMedium)
+                Button(onClick = { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) {
+                    Text("Activer l'accessibilité")
+                }
+                OutlinedButton(onClick = { activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
+                    Text("Autoriser les statistiques d'utilisation")
+                }
 
             }
             items(policies, key = { it.packageName }) { p ->
@@ -113,7 +111,17 @@ private fun FocusHome(activity: MainActivity) {
                 val remainingMs = (limitMs - usage).coerceAtLeast(0L)
                 Card(onClick = { selected = p }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text(p.label, style = MaterialTheme.typography.titleMedium)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(p.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = p.permanentLock,
+                                onCheckedChange = { locked ->
+                                    PolicyStore.savePolicy(activity, p.copy(permanentLock = locked))
+                                    refresh++
+                                }
+                            )
+                        }
+                        Text(if (p.permanentLock) "Application verrouillée" else "Verrouillage total désactivé", style = MaterialTheme.typography.bodySmall)
                         if (p.dailyEnabled) {
                             Text("Aujourd'hui : ${formatUsageTime(usage)} / ${p.dailyMinutes}min")
                             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
