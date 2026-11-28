@@ -54,7 +54,9 @@ private fun BlockScreen(activity: Activity, pkg: String) {
     }.getOrDefault(pkg)
     val usedMin = TimeUnit.MILLISECONDS.toMinutes(state.usedMs)
     val cooldownMs = (state.cooldownUntilWall - now).coerceAtLeast(0)
-    val cooldownText = if (state.reason == "Limite journalière") {
+    val cooldownText = if (policy?.permanentLock == true) {
+        "Déverrouille cette application depuis Focus Control."
+    } else if (state.reason == "Limite journalière") {
         val cycleEnd = state.cycleStartWall + 24L * 60 * 60 * 1000
         formatTime((cycleEnd - now).coerceAtLeast(0))
     } else formatTime(cooldownMs)
@@ -63,11 +65,15 @@ private fun BlockScreen(activity: Activity, pkg: String) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Temps écoulé", style = MaterialTheme.typography.headlineLarge)
-            Text("$label est temporairement bloqué.")
+            Text(if (policy?.permanentLock == true) "$label est verrouillé." else "$label est temporairement bloqué.")
             Spacer(Modifier.height(24.dp))
             InfoCard("UTILISATION AUJOURD'HUI", "$usedMin min" + (policy?.let { " / ${it.dailyMinutes} min" } ?: ""))
             InfoCard("LIMITE ATTEINTE", state.reason.ifBlank { "Restriction active" })
-            InfoCard("TEMPS RESTANT AVANT DÉBLOCAGE", cooldownText)
+            if (policy?.permanentLock == true) {
+                InfoCard("DÉVERROUILLAGE", cooldownText)
+            } else {
+                InfoCard("TEMPS RESTANT AVANT DÉBLOCAGE", cooldownText)
+            }
             Spacer(Modifier.height(24.dp))
             Button(onClick = {
                 val home = Intent(Intent.ACTION_MAIN).apply {
