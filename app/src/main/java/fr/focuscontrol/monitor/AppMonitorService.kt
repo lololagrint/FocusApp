@@ -188,6 +188,14 @@ class AppMonitorService : AccessibilityService() {
     // Vérifie l'état des restrictions et ouvre l'écran de blocage si une limite est dépassée.
     private fun enforce(pkg: String) {
         val policy = PolicyStore.policy(this, pkg) ?: return
+        if (policy.permanentLock) {
+            val intent = Intent(this, BlockActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra(BlockActivity.EXTRA_PACKAGE, pkg)
+            }
+            startActivity(intent)
+            return
+        }
         val now = System.currentTimeMillis()
         var state = PolicyStore.clearCooldownIfExpired(this, pkg, now)
 
