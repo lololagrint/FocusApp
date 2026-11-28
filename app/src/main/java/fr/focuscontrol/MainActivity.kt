@@ -135,8 +135,6 @@ private fun FocusHome(activity: MainActivity) {
                 OutlinedButton(onClick = { activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
                     Text("Autoriser les statistiques d'utilisation")
                 }
-
-            }
             }
             item {
                 OutlinedButton(onClick = {
