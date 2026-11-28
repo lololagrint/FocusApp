@@ -73,29 +73,6 @@ private fun FocusHome(activity: MainActivity) {
             item {
                 Text("Suivi du temps d'écran", style = MaterialTheme.typography.titleMedium)
                 Text("Utilisation sur la période journalière de 24 h de chaque application.", style = MaterialTheme.typography.bodySmall)
-                Divider()
-                Text("Conservation du compteur de session", style = MaterialTheme.typography.titleMedium)
-                OutlinedTextField(
-                    value = retentionText,
-                    onValueChange = { retentionText = it.filter(Char::isDigit).take(4) },
-                    label = { Text("Durée en minutes (1 à 1440)") },
-                    singleLine = true
-                )
-                Button(onClick = {
-                    val minutes = retentionText.toIntOrNull()?.coerceIn(1, 1440) ?: 10
-                    PolicyStore.setSessionRetentionMinutes(activity, minutes)
-                    retentionText = minutes.toString()
-                }) { Text("Enregistrer la durée") }
-                Divider()
-                Text("Surveillance", style = MaterialTheme.typography.titleMedium)
-                Button(onClick = { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) {
-                    Text("Activer l'accessibilité")
-                }
-                OutlinedButton(onClick = { activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
-                    Text("Autoriser les statistiques d'utilisation")
-                }
-
-            }
             items(policies, key = { it.packageName }) { p ->
                 val usage = remember(p.packageName, dashboardTick, refresh) {
                     val now = System.currentTimeMillis()
@@ -132,6 +109,33 @@ private fun FocusHome(activity: MainActivity) {
                         Text("Session : ${if (p.sessionEnabled) "activée" else "désactivée"} • Limite : ${p.sessionMinutes}min • Cooldown : ${p.cooldownMinutes}min", style = MaterialTheme.typography.bodySmall)
                     }
                 }
+            }
+            item {
+                Divider()
+                Text("Conservation du compteur de session", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    value = retentionText,
+                    onValueChange = { retentionText = it.filter(Char::isDigit).take(4) },
+                    label = { Text("Durée en minutes (1 à 1440)") },
+                    singleLine = true
+                )
+                Button(onClick = {
+                    val minutes = retentionText.toIntOrNull()?.coerceIn(1, 1440) ?: 10
+                    PolicyStore.setSessionRetentionMinutes(activity, minutes)
+                    retentionText = minutes.toString()
+                }) { Text("Enregistrer la durée") }
+            }
+            item {
+                Divider()
+                Text("Surveillance", style = MaterialTheme.typography.titleMedium)
+                Button(onClick = { activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) {
+                    Text("Activer l'accessibilité")
+                }
+                OutlinedButton(onClick = { activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
+                    Text("Autoriser les statistiques d'utilisation")
+                }
+
+            }
             }
             item {
                 OutlinedButton(onClick = {
