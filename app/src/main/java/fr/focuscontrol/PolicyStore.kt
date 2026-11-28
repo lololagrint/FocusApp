@@ -11,7 +11,8 @@ data class AppPolicy(
     val sessionMinutes: Int = 15,
     val cooldownMinutes: Int = 30,
     val dailyEnabled: Boolean = true,
-    val sessionEnabled: Boolean = true
+    val sessionEnabled: Boolean = true,
+    val permanentLock: Boolean = false
 )
 
 // État d'utilisation et de blocage conservé entre les ouvertures de l'application.
@@ -67,7 +68,8 @@ object PolicyStore {
                     sessionMinutes = o.optInt("session", 15),
                     cooldownMinutes = o.optInt("cooldown", 30),
                     dailyEnabled = o.optBoolean("dailyEnabled", true),
-                    sessionEnabled = o.optBoolean("sessionEnabled", true)
+                    sessionEnabled = o.optBoolean("sessionEnabled", true),
+                    permanentLock = o.optBoolean("permanentLock", false)
                 )
             }.getOrNull()
         }.sortedBy { it.label.lowercase() }.toList()
@@ -85,7 +87,8 @@ object PolicyStore {
             .put("session", p.sessionMinutes.coerceIn(1, 1440))
             .put("cooldown", p.cooldownMinutes.coerceIn(0, 1440))
             .put("dailyEnabled", p.dailyEnabled)
-            .put("sessionEnabled", p.sessionEnabled))
+            .put("sessionEnabled", p.sessionEnabled)
+            .put("permanentLock", p.permanentLock))
         prefs(context).edit().putString(POLICIES, root.toString()).apply()
 
         // Un changement d'état de la limite de session démarre une nouvelle progression à zéro.
