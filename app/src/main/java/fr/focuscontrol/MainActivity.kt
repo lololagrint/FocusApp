@@ -73,6 +73,7 @@ private fun FocusHome(activity: MainActivity) {
             item {
                 Text("Suivi du temps d'écran", style = MaterialTheme.typography.titleMedium)
                 Text("Utilisation sur la période journalière de 24 h de chaque application.", style = MaterialTheme.typography.bodySmall)
+            }
             items(policies, key = { it.packageName }) { p ->
                 val usage = remember(p.packageName, dashboardTick, refresh) {
                     val now = System.currentTimeMillis()
