@@ -155,7 +155,7 @@ class AppMonitorService : AccessibilityService() {
         runCatching { NotificationManagerCompat.from(this).notify(pkg.hashCode(), notification) }
     }
 
-    // Organise les rappels : toutes les 10 minutes, puis chaque minute dans les 5 dernières minutes.
+    // Organise les rappels : toutes les 5 minutes, puis chaque minute dans les 5 dernières minutes.
     private fun scheduleReminder(pkg: String) {
         reminderTask?.let(handler::removeCallbacks)
         reminderTask = null
@@ -164,7 +164,7 @@ class AppMonitorService : AccessibilityService() {
         val delay = if (remaining <= fiveMinutes) {
             minOf(60_000L, remaining)
         } else {
-            minOf(10L * 60_000L, remaining - fiveMinutes)
+            minOf(5L * 60_000L, remaining - fiveMinutes)
         }
         val task = Runnable {
             if (foregroundPackage == pkg && foregroundSince > 0) {
