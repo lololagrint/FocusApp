@@ -77,6 +77,7 @@ object PolicyStore {
         policies(context).firstOrNull { it.packageName == packageName }
 
     fun savePolicy(context: Context, p: AppPolicy) {
+        val previous = policy(context, p.packageName)
         val root = JSONObject(prefs(context).getString(POLICIES, "{}") ?: "{}")
         root.put(p.packageName, JSONObject()
             .put("label", p.label)
@@ -86,6 +87,18 @@ object PolicyStore {
             .put("dailyEnabled", p.dailyEnabled)
             .put("sessionEnabled", p.sessionEnabled))
         prefs(context).edit().putString(POLICIES, root.toString()).apply()
+
+        // Un changement d'état de la limite de session démarre une nouvelle progression à zéro.
+        if (previous != null && previous.sessionEnabled != p.sessionEnabled) {
+            val current = state(context, p.packageName)
+            val reset = current.copy(
+                reason = if (current.reason == "Limite de session") "" else current.reason,
+                cooldownUntilWall = if (current.reason == "Limite de session") 0L else current.cooldownUntilWall,
+                sessionUsedMs = 0L,
+                sessionLastActiveWall = 0L
+            )
+            saveState(context, p.packageName, reset)
+        }
     }
 
     fun removePolicy(context: Context, packageName: String) {
